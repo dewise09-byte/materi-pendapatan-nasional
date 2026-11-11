@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ekonomi Interaktif - Pendapatan Nasional</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js for Graphics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#1e3a8a', // Blue-900
+                        secondary: '#22c55e', // Green-500
+                        accent: '#f59e0b', // Amber-500
+                        light: '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f8fafc; overflow-x: hidden; }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Print Style for Certificate */
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;}
+            .no-print { display: none !important; }
+        }
+
+        .math-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 1rem; margin: 1rem 0; border-radius: 0 0.5rem 0.5rem 0; }
+        
+        /* Interactive Quiz Styles */
+        .option-btn { transition: all 0.2s; border: 2px solid #e2e8f0; }
+        .option-btn:hover:not(:disabled) { border-color: #3b82f6; background-color: #eff6ff; }
+        .option-btn.selected { border-color: #3b82f6; background-color: #eff6ff; }
+        .option-btn.correct { border-color: #22c55e; background-color: #dcfce7; color: #166534; }
+        .option-btn.wrong { border-color: #ef4444; background-color: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased h-screen flex overflow-hidden">
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center fade-in">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            <div id="modal-header" class="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
+                <h3 id="modal-title" class="font-bold text-lg text-primary">Informasi</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-body" class="p-6 text-slate-600"></div>
+            <div class="px-6 py-4 border-t bg-gray-50 text-right">
+                <button onclick="closeModal()" class="bg-primary text-white px-4 py-2 rounded-lg shadow hover:bg-blue-800 transition">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="bg-primary text-white w-64 flex-shrink-0 flex flex-col transition-transform transform md:translate-x-0 -translate-x-full absolute md:relative z-40 h-full">
+        <div class="p-6 border-b border-blue-800 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold tracking-wider">EKONOMI<br><span class="text-secondary">INTERAKTIF</span></h1>
+                <p class="text-xs text-blue-200 mt-1">Fase F - Kelas XI</p>
+            </div>
+            <button onclick="toggleSidebar()" class="md:hidden text-white"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-4 custom-scrollbar" id="nav-menu">
+            <!-- Navigation items injected via JS -->
+        </div>
+
+        <div class="p-4 border-t border-blue-800">
+            <div class="bg-blue-800 rounded-lg p-3 text-sm">
+                <p class="font-semibold">Guru Pengampu:</p>
+                <p class="text-blue-200 text-xs">Dewi I. Rolobessy, S.E.</p>
+                <p class="text-blue-200 text-xs truncate">SMA N 46 Maluku Tengah</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden w-full relative">
+        <!-- Topbar -->
+        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-6 z-30 flex-shrink-0">
+            <div class="flex items-center">
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-500 hover:text-primary mr-4">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <h2 id="topbar-title" class="font-semibold text-lg text-slate-700 hidden sm:block">Beranda</h2>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 text-sm font-medium">
+                    <span class="text-slate-500">Mode:</span>
+                    <button id="role-btn-siswa" onclick="setRole('siswa')" class="px-3 py-1 rounded-full bg-blue-100 text-primary transition">Siswa</button>
+                    <button id="role-btn-guru" onclick="setRole('guru')" class="px-3 py-1 rounded-full text-slate-500 hover:bg-slate-100 transition">Guru</button>
+                </div>
+                <!-- Progress Bar mini -->
+                <div id="mini-progress" class="hidden md:flex items-center gap-2" title="Progres Belajar">
+                    <i class="fas fa-trophy text-accent"></i>
+                    <span id="progress-text" class="text-sm font-bold text-slate-700">0%</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-secondary to-green-400 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic View Container -->
+        <main id="main-content" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative pb-24"></main>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // --- DATA & CONTENT ---
+        const materiData = [
+            {
+                id: 'bab1', title: 'BAB 1: Pengertian Pendapatan Nasional',
+                content: `
+                    <div class="space-y-4 text-slate-700">
+                        <img src="https://placehold.co/800x300/1e3a8a/ffffff?text=Pendapatan+Nasional" alt="Header" class="w-full h-48 object-cover rounded-xl shadow-sm mb-6">
+                        <h3 class="text-2xl font-bold text-primary">Apa itu Pendapatan Nasional?</h3>
+                        <p>Pendapatan nasional adalah keseluruhan jumlah pendapatan yang diperoleh semua masyarakat atau pelaku ekonomi yang tinggal di suatu negara dalam kurun waktu tertentu, biasanya satu tahun.</p>
+                        <p>Secara sederhana, bayangkan negara adalah sebuah keluarga besar. Pendapatan nasional adalah total seluruh uang yang dihasilkan oleh semua anggota keluarga tersebut dalam setahun dari berbagai macam pekerjaan dan usaha.</p>
+                        
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 mt-6">
+                            <h4 class="font-bold text-lg text-secondary mb-3"><i class="fas fa-bullseye mr-2"></i>Tujuan Perhitungan</h4>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li>Mengukur tingkat kesejahteraan masyarakat suatu negara.</li>
+                                <li>Membandingkan kemajuan perekonomian dari waktu ke waktu.</li>
+                                <li>Mengetahui struktur perekonomian suatu negara (agraris, industri, atau jasa).</li>
+                                <li>Menjadi pedoman bagi pemerintah dalam merumuskan kebijakan ekonomi.</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'bab2', title: 'BAB 2: Konsep-Konsep Pendapatan Nasional',
+                content: `
+                    <div class="space-y-6 text-slate-700">
+                        <p>Untuk menghitung pendapatan nasional, terdapat beberapa konsep yang berjenjang. Mari kita pelajari satu per satu dari yang terluas hingga yang siap dibelanjakan.</p>
+                        
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-blue-500">
+                                <h4 class="font-bold text-lg text-primary">1. Produk Domestik Bruto (PDB / GDP)</h4>
+                                <p class="text-sm mt-2">Total nilai barang dan jasa akhir yang dihasilkan oleh <b>seluruh unit ekonomi di dalam wilayah</b> suatu negara, baik oleh warga negara maupun warga asing.</p>
+                                <p class="text-xs text-slate-500 mt-2">Kata kunci: "Domestik" = Batas Wilayah.</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-green-500">
+                                <h4 class="font-bold text-lg text-primary">2. Produk Nasional Bruto (PNB / GNP)</h4>
+                                <p class="text-sm mt-2">Total nilai barang dan jasa yang dihasilkan oleh <b>warga negara suatu negara</b>, baik yang berada di dalam negeri maupun di luar negeri.</p>
+                                <div class="math-box text-sm">PNB = PDB + (Pendapatan WNI di Luar Negeri - Pendapatan WNA di Dalam Negeri)</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-amber-500">
+                                <h4 class="font-bold text-lg text-primary">3. Produk Nasional Neto (PNN / NNP)</h4>
+                                <p class="text-sm mt-2">Nilai barang yang dihasilkan dikurangi dengan penyusutan modal dalam proses produksi.</p>
+                                <div class="math-box text-sm">PNN = PNB - Penyusutan (Depresiasi)</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-purple-500">
+                                <h4 class="font-bold text-lg text-primary">4. Pendapatan Nasional Neto (NNI)</h4>
+                                <p class="text-sm mt-2">Pendapatan yang dihitung menurut jumlah balas jasa yang diterima oleh masyarakat sebagai pemilik faktor produksi.</p>
+                                <div class="math-box text-sm">NNI = PNN - Pajak Tidak Langsung + Subsidi</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-red-500">
+                                <h4 class="font-bold text-lg text-primary">5. Pendapatan Perseorangan (PI)</h4>
+                                <p class="text-sm mt-2">Jumlah seluruh penerimaan yang benar-benar sampai di tangan masyarakat.</p>
+                                <div class="math-box text-sm">PI = (NNI + Transfer Payment) - (Laba Ditahan + Iuran Asuransi/Jamsostek + Pajak Perseroan)</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-teal-500">
+                                <h4 class="font-bold text-lg text-primary">6. Pendapatan Disposabel (DI)</h4>
+                                <p class="text-sm mt-2">Pendapatan yang siap untuk dimanfaatkan untuk konsumsi atau ditabung.</p>
+                                <div class="math-box text-sm">DI = PI - Pajak Langsung</div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'bab3', title: 'BAB 4: Metode Perhitungan Pendapatan Nasional',
+                content: `
+                    <div class="space-y-6 text-slate-700">
+                        <p>Pendapatan nasional dapat dihitung menggunakan 3 pendekatan. Nilai akhir dari ketiga pendekatan ini secara teoritis haruslah sama.</p>
+                        
+                        <div class="space-y-4">
+                            <div class="bg-white p-5 rounded-xl shadow-sm">
+                                <h4 class="font-bold text-lg text-primary mb-2">A. Pendekatan Produksi (Production Approach)</h4>
+                                <p class="text-sm">Menjumlahkan nilai tambah (Value Added) dari seluruh sektor produksi dalam perekonomian.</p>
+                                <div class="math-box font-bold font-mono">Y = (P1 × Q1) + (P2 × Q2) + ... + (Pn × Qn)</div>
+                                <p class="text-sm italic">Keterangan: P = Harga, Q = Kuantitas.</p>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-xl shadow-sm">
+                                <h4 class="font-bold text-lg text-primary mb-2">B. Pendekatan Pendapatan (Income Approach)</h4>
+                                <p class="text-sm">Menjumlahkan seluruh balas jasa yang diterima oleh pemilik faktor produksi.</p>
+                                <div class="math-box font-bold font-mono text-lg text-center">Y = r + w + i + p</div>
+                                <ul class="text-sm grid grid-cols-2 gap-2 mt-2">
+                                    <li><b>r</b> (Rent): Sewa tanah/alam</li>
+                                    <li><b>w</b> (Wage): Upah tenaga kerja</li>
+                                    <li><b>i</b> (Interest): Bunga modal</li>
+                                    <li><b>p</b> (Profit): Laba pengusaha</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-xl shadow-sm">
+                                <h4 class="font-bold text-lg text-primary mb-2">C. Pendekatan Pengeluaran (Expenditure Approach)</h4>
+                                <p class="text-sm">Menjumlahkan seluruh pengeluaran yang dilakukan oleh pelaku ekonomi.</p>
+                                <div class="math-box font-bold font-mono text-lg text-center">Y = C + I + G + (X - M)</div>
+                                <ul class="text-sm grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                    <li><b>C</b> (Consumption): Konsumsi rumah tangga</li>
+                                    <li><b>I</b> (Investment): Investasi perusahaan</li>
+                                    <li><b>G</b> (Government): Pengeluaran pemerintah</li>
+                                    <li><b>X - M</b>: Ekspor neto (Ekspor dikurang Impor)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Mini Interactive Tool -->
+                        <div class="bg-blue-50 border border-blue-200 p-5 rounded-xl text-center mt-6">
+                            <h5 class="font-bold text-primary mb-2">Coba Hitung Sendiri!</h5>
+                            <p class="text-sm mb-4">Gunakan Kalkulator Pendapatan Nasional yang tersedia di menu samping untuk mensimulasikan perhitungan rumus-rumus di atas.</p>
+                            <button onclick="navigateTo('calculator')" class="bg-secondary text-white px-4 py-2 rounded-full font-medium hover:bg-green-600 transition shadow">Buka Kalkulator</button>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'bab4', title: 'BAB 5 & 6: Pendapatan Per Kapita & Analisis',
+                content: `
+                    <div class="space-y-6 text-slate-700">
+                        <div class="bg-white p-5 rounded-xl shadow-sm">
+                            <h4 class="font-bold text-xl text-primary border-b pb-2 mb-3">Pendapatan Per Kapita</h4>
+                            <p>Pendapatan per kapita adalah besarnya pendapatan rata-rata penduduk di suatu negara. Indikator ini digunakan untuk mengukur tingkat kesejahteraan makro suatu negara.</p>
+                            <div class="math-box flex justify-center py-4">
+                                <div class="text-center font-bold">
+                                    <div class="border-b-2 border-black pb-1 mb-1">Pendapatan Nasional (PDB atau PNB)</div>
+                                    <div>Jumlah Penduduk</div>
+                                </div>
+                            </div>
+                            <p class="text-sm text-slate-600 mt-2"><b>Analisis:</b> Tingginya pendapatan nasional tidak menjamin kesejahteraan jika jumlah penduduknya juga sangat besar. Oleh karena itu, pendapatan per kapita menjadi indikator yang lebih realistis.</p>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl shadow-sm">
+                            <h4 class="font-bold text-xl text-primary border-b pb-2 mb-3">Distribusi Pendapatan & Koefisien Gini</h4>
+                            <p>Pendapatan per kapita rata-rata tidak menunjukkan apakah kekayaan terdistribusi merata. Untuk mengukur ketimpangan distribusi pendapatan, ekonom menggunakan <b>Kurva Lorenz</b> dan <b>Koefisien Gini</b>.</p>
+                            <ul class="list-disc pl-5 mt-3 space-y-1 text-sm">
+                                <li><b>Koefisien Gini 0</b>: Pemerataan sempurna (semua orang pendapatannya sama).</li>
+                                <li><b>Koefisien Gini 1</b>: Ketimpangan sempurna (satu orang menguasai seluruh pendapatan).</li>
+                            </ul>
+                            <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+                                <b>Contoh Kontekstual Maluku Tengah:</b> Pembangunan infrastruktur dan pengembangan UMKM perikanan dan pertanian di Maluku Tengah diharapkan tidak hanya menaikkan PDB daerah, tetapi juga menurunkan ketimpangan sehingga koefisien Gini mendekati 0.
+                            </div>
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        const quizData = [
+            { q: "Jumlah seluruh nilai barang dan jasa akhir yang dihasilkan oleh suatu negara dalam kurun waktu satu tahun disebut...", options: ["Pendapatan per kapita", "Pendapatan nasional", "Pendapatan personal", "Pendapatan disposabel"], answer: 1, explanation: "Pendapatan nasional adalah keseluruhan jumlah pendapatan atau nilai barang/jasa akhir yang dihasilkan masyarakat suatu negara." },
+            { q: "Produk yang dihasilkan oleh WNI di dalam negeri ditambah produk WNA di dalam negeri merupakan konsep dari...", options: ["PDB (GDP)", "PNB (GNP)", "PNN (NNP)", "PI"], answer: 0, explanation: "PDB (Produk Domestik Bruto) berbasis kewilayahan. Seluruh produksi di dalam batas negara (baik oleh WNI maupun WNA)." },
+            { q: "Rumus untuk mencari Produk Nasional Neto (PNN) adalah...", options: ["PDB + Pendapatan Neto luar negeri", "PNB - Pajak Tidak Langsung", "PNB - Penyusutan", "NNI - Pajak Langsung"], answer: 2, explanation: "PNN (Net National Product) didapat dengan mengurangi PNB dengan biaya penyusutan (depresiasi)." },
+            { q: "Diketahui PDB Rp1.000M, Pendapatan WNA di dalam negeri Rp200M, Pendapatan WNI di luar negeri Rp100M. Berapakah PNB-nya?", options: ["Rp1.100 M", "Rp900 M", "Rp1.300 M", "Rp700 M"], answer: 1, explanation: "PNB = PDB + WNI LN - WNA DN = 1000 + 100 - 200 = 900." },
+            { q: "Pendapatan yang siap untuk dibelanjakan atau ditabung (setelah dikurangi pajak langsung) disebut...", options: ["NNI", "Personal Income (PI)", "Disposable Income (DI)", "PDB"], answer: 2, explanation: "Disposable Income (DI) adalah pendapatan yang benar-benar siap dibelanjakan (DI = PI - Pajak Langsung)." },
+            { q: "Perhitungan pendapatan nasional dengan menjumlahkan sewa, upah, bunga modal, dan laba adalah metode pendekatan...", options: ["Produksi", "Pendapatan", "Pengeluaran", "Konsumsi"], answer: 1, explanation: "Pendekatan pendapatan rumusnya Y = r + w + i + p." },
+            { q: "Dalam pendekatan pengeluaran, rumus yang digunakan adalah Y = C + I + G + (X - M). Huruf G melambangkan...", options: ["Government Expenditure", "Gross Domestic", "Gross Profit", "Growth"], answer: 0, explanation: "G adalah Government Expenditure atau pengeluaran pemerintah." },
+            { q: "Apabila nilai Ekspor (X) lebih kecil dari Impor (M), maka dampaknya terhadap pendapatan nasional (metode pengeluaran) adalah...", options: ["Akan menambah pendapatan nasional", "Akan mengurangi pendapatan nasional", "Tidak ada pengaruh", "Pendapatan nasional menjadi nol"], answer: 1, explanation: "Bagian (X-M) bernilai negatif, sehingga akan mengurangi total Y." },
+            { q: "Tujuan perhitungan pendapatan nasional, kecuali...", options: ["Mengetahui struktur perekonomian", "Membandingkan kemajuan ekonomi antar negara", "Mengetahui pemerataan kekayaan pejabat", "Pedoman perumusan kebijakan pemerintah"], answer: 2, explanation: "Mengetahui kekayaan pribadi pejabat bukan tujuan makroekonomi pendapatan nasional." },
+            { q: "Indikator yang paling tepat untuk mengukur tingkat kesejahteraan penduduk suatu negara secara rata-rata adalah...", options: ["Produk Domestik Bruto", "Pertumbuhan Ekonomi", "Tingkat Inflasi", "Pendapatan Per Kapita"], answer: 3, explanation: "Pendapatan per kapita membagi PDB/PNB dengan jumlah penduduk, mencerminkan rata-rata kesejahteraan." }
+        ];
+
+        // Generate 20 eval questions (expanding dynamically to keep file size optimized, maintaining logic)
+        const evalData = [
+            ...quizData, // Re-use 10 for demonstration logic
+            { q: "Subsidi dalam perhitungan pendapatan nasional (dari PNN ke NNI) sifatnya...", options: ["Mengurangi NNI", "Menambah NNI", "Tidak Berpengaruh", "Mengurangi Penyusutan"], answer: 1, explanation: "NNI = PNN - Pajak Tidak Langsung + Subsidi. Jadi subsidi bersifat menambah." },
+            { q: "Manakah yang termasuk komponen pengeluaran (C) dalam rumus pengeluaran?", options: ["Pemerintah membangun jalan tol", "Perusahaan membeli mesin pabrik", "Keluarga membeli bahan makanan sehari-hari", "Negara mengekspor hasil bumi"], answer: 2, explanation: "Pembelian makanan keluarga masuk Konsumsi Rumah Tangga (C)." },
+            { q: "Pajak bumi dan bangunan (PBB) dan Pajak Penghasilan (PPh) termasuk dalam...", options: ["Pajak Tidak Langsung", "Pajak Langsung", "Retribusi", "Subsidi"], answer: 1, explanation: "PBB dan PPh adalah pajak langsung yang memotong Personal Income menjadi Disposable Income." },
+            { q: "Metode menjumlahkan nilai tambah (value added) pada tiap tahap produksi digunakan untuk menghindari masalah...", options: ["Inflasi", "Deflasi", "Penghitungan Ganda (Double Counting)", "Penyusutan"], answer: 2, explanation: "Nilai tambah digunakan agar harga bahan baku tidak dihitung berulang-ulang dengan harga barang jadi." },
+            { q: "Diketahui (dalam miliar): Konsumsi=200, Investasi=150, Pengeluaran Pemerintah=100, Ekspor=50, Impor=70. Hitung Y dengan pendekatan pengeluaran!", options: ["Rp 430", "Rp 500", "Rp 570", "Rp 400"], answer: 0, explanation: "Y = C + I + G + (X-M) = 200 + 150 + 100 + (50-70) = 450 - 20 = 430." },
+            { q: "Transfer payment adalah...", options: ["Penerimaan bukan balas jasa produksi tahun ini", "Uang suap", "Pembayaran utang luar negeri", "Investasi asing"], answer: 0, explanation: "Transfer payment (misal dana pensiun) ditambahkan ke NNI untuk mendapat PI." },
+            { q: "Negara A memiliki PDB Rp 5.000 T dan Penduduk 50 juta. Negara B memiliki PDB Rp 4.000 T dan Penduduk 20 juta. Manakah yang lebih makmur?", options: ["Negara A", "Negara B", "Sama makmurnya", "Tidak bisa ditentukan"], answer: 1, explanation: "Per kapita A = 5000/50 = 100. Per kapita B = 4000/20 = 200. B lebih besar." },
+            { q: "Alat pengukur ketimpangan distribusi pendapatan yang memiliki skala 0 sampai 1 adalah...", options: ["Kurva Phillips", "Indeks Harga", "Koefisien Gini", "PDB Riil"], answer: 2, explanation: "Koefisien Gini digunakan untuk mengukur ketimpangan distribusi pendapatan." },
+            { q: "Sektor agraris menyumbang 40% PDB, industri 20%, jasa 40%. Ini menunjukkan manfaat pendapatan nasional untuk...", options: ["Mengukur inflasi", "Mengetahui struktur perekonomian", "Menetapkan pajak", "Meningkatkan ekspor"], answer: 1, explanation: "Rincian sektor menunjukkan struktur/karakteristik ekonomi negara." },
+            { q: "Jika PDB > PNB, maka disimpulkan bahwa...", options: ["Banyak penanaman modal asing di negara tersebut", "Negara tersebut maju", "Investasi negara itu di luar negeri sangat besar", "Negara sedang krisis"], answer: 0, explanation: "PDB > PNB berarti produksi WNA di dalam negeri lebih besar dibanding produksi WNI di luar negeri." }
+        ];
+
+        // --- STATE MANAGEMENT ---
+        let state = {
+            role: 'siswa', // 'siswa' or 'guru'
+            currentRoute: 'home',
+            progress: JSON.parse(localStorage.getItem('eco_progress')) || {
+                chaptersRead: [],
+                quizScore: null,
+                evalScore: null,
+                evalAnswers: {}
+            },
+            studentsData: JSON.parse(localStorage.getItem('eco_students')) || []
+        };
+
+        function saveProgress() {
+            localStorage.setItem('eco_progress', JSON.stringify(state.progress));
+            updateMiniProgress();
+        }
+
+        // Simulating DB for Teacher
+        function saveStudentData(type, score) {
+            let data = state.studentsData;
+            let student = data.find(s => s.id === 'siswa-001');
+            if(!student) {
+                student = { id: 'siswa-001', name: 'Siswa Maluku Tengah', quiz: 0, eval: 0, date: '' };
+                data.push(student);
+            }
+            if(type==='quiz') student.quiz = score;
+            if(type==='eval') student.eval = score;
+            student.date = new Date().toLocaleDateString('id-ID');
+            localStorage.setItem('eco_students', JSON.stringify(data));
+        }
+
+        // --- ROUTING & NAVIGATION ---
+        const routes = [
+            { id: 'home', title: 'Beranda', icon: 'fa-home', showSiswa: true, showGuru: true },
+            { id: 'guide', title: 'Petunjuk', icon: 'fa-info-circle', showSiswa: true, showGuru: true },
+            { id: 'goals', title: 'Tujuan Pembelajaran', icon: 'fa-bullseye', showSiswa: true, showGuru: true },
+            { id: 'materi', title: 'Materi Belajar', icon: 'fa-book', showSiswa: true, showGuru: true },
+            { id: 'calculator', title: 'Kalkulator Ekonomi', icon: 'fa-calculator', showSiswa: true, showGuru: true },
+            { id: 'infographic', title: 'Infografis', icon: 'fa-image', showSiswa: true, showGuru: true },
+            { id: 'video', title: 'Video Pembelajaran', icon: 'fa-play-circle', showSiswa: true, showGuru: true },
+            { id: 'exercise', title: 'Latihan Interaktif', icon: 'fa-gamepad', showSiswa: true, showGuru: true },
+            { id: 'quiz', title: 'Kuis Interaktif', icon: 'fa-stopwatch', showSiswa: true, showGuru: true },
+            { id: 'eval', title: 'Evaluasi Akhir', icon: 'fa-award', showSiswa: true, showGuru: true },
+            { id: 'dashboard', title: 'Dasbor Guru', icon: 'fa-chalkboard-teacher', showSiswa: false, showGuru: true },
+        ];
+
+        function navigateTo(routeId) {
+            state.currentRoute = routeId;
+            renderApp();
+            if(window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+            }
+        }
+
+        function setRole(role) {
+            state.role = role;
+            if(role === 'siswa' && state.currentRoute === 'dashboard') {
+                state.currentRoute = 'home';
+            }
+            renderApp();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        function markChapterRead(id) {
+            if (!state.progress.chaptersRead.includes(id)) {
+                state.progress.chaptersRead.push(id);
+                saveProgress();
+            }
+        }
+
+        function updateMiniProgress() {
+            const total = materiData.length + 2; // chapters + quiz + eval
+            let done = state.progress.chaptersRead.length;
+            if(state.progress.quizScore !== null) done++;
+            if(state.progress.evalScore !== null) done++;
+            const pct = Math.round((done / total) * 100);
+            document.getElementById('progress-text').innerText = `${pct}%`;
+        }
+
+        function showModal(title, contentHTML) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerHTML = contentHTML;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        // --- RENDER FUNCTIONS ---
+        function renderApp() {
+            // Update Role Buttons UI
+            document.getElementById('role-btn-siswa').className = state.role === 'siswa' ? 'px-3 py-1 rounded-full bg-blue-100 text-primary font-bold shadow-sm transition' : 'px-3 py-1 rounded-full text-slate-500 hover:bg-slate-100 transition';
+            document.getElementById('role-btn-guru').className = state.role === 'guru' ? 'px-3 py-1 rounded-full bg-blue-100 text-primary font-bold shadow-sm transition' : 'px-3 py-1 rounded-full text-slate-500 hover:bg-slate-100 transition';
+            
+            // Update Sidebar Navigation
+            const navMenu = document.getElementById('nav-menu');
+            navMenu.innerHTML = routes.filter(r => (state.role === 'guru' && r.showGuru) || (state.role === 'siswa' && r.showSiswa))
+                .map(r => `
+                <button onclick="navigateTo('${r.id}')" class="w-full text-left px-6 py-3 transition duration-200 flex items-center gap-3 ${state.currentRoute === r.id ? 'bg-blue-800 border-r-4 border-secondary font-semibold' : 'hover:bg-blue-800 text-blue-100'}">
+                    <i class="fas ${r.icon} w-5 text-center"></i>
+                    <span>${r.title}</span>
+                </button>
+            `).join('');
+
+            // Set Title
+            const routeDef = routes.find(r => r.id === state.currentRoute);
+            document.getElementById('topbar-title').innerText = routeDef ? routeDef.title : 'Ekonomi Interaktif';
+
+            // Render Content
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = '';
+            mainContent.className = "flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative pb-24 fade-in";
+
+            updateMiniProgress();
+
+            switch(state.currentRoute) {
+                case 'home': renderHome(mainContent); break;
+                case 'guide': renderGuide(mainContent); break;
+                case 'goals': renderGoals(mainContent); break;
+                case 'materi': renderMateri(mainContent); break;
+                case 'calculator': renderCalculator(mainContent); break;
+                case 'infographic': renderInfographic(mainContent); break;
+                case 'video': renderVideo(mainContent); break;
+                case 'exercise': renderExercise(mainContent); break;
+                case 'quiz': renderQuiz(mainContent); break;
+                case 'eval': renderEval(mainContent); break;
+                case 'dashboard': renderDashboard(mainContent); break;
+                default: renderHome(mainContent);
+            }
+        }
+
+        // --- VIEWS ---
+        function renderHome(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto text-center space-y-8 mt-4 md:mt-10">
+                    <div class="inline-block p-4 rounded-full bg-blue-100 text-primary mb-4 shadow-sm animate-bounce">
+                        <i class="fas fa-chart-line text-5xl"></i>
+                    </div>
+                    <h1 class="text-3xl md:text-5xl font-extrabold text-primary leading-tight">
+                        Selamat Datang di <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-green-500">Ekonomi Interaktif</span>
+                    </h1>
+                    <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                        Media pembelajaran berbasis web untuk memahami materi Pendapatan Nasional kelas XI Fase F Kurikulum Merdeka dengan cara yang modern, mudah, dan menyenangkan.
+                    </p>
+                    
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 max-w-lg mx-auto flex items-center gap-4 text-left">
+                        <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-primary">
+                            <i class="fas fa-chalkboard-teacher text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-500 font-medium">Disusun Oleh:</p>
+                            <p class="font-bold text-lg text-slate-800">Dewi I. Rolobessy, S.E.</p>
+                            <p class="text-sm text-slate-600">SMA Negeri 46 Maluku Tengah</p>
+                        </div>
+                    </div>
+
+                    <button onclick="navigateTo('goals')" class="mt-8 bg-primary hover:bg-blue-800 text-white font-bold py-4 px-10 rounded-full shadow-xl transition transform hover:-translate-y-1 text-lg">
+                        Mulai Belajar <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderGuide(container) {
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="bg-primary p-6 text-white text-center">
+                        <i class="fas fa-map-signs text-4xl mb-3"></i>
+                        <h2 class="text-2xl font-bold">Petunjuk Penggunaan</h2>
+                    </div>
+                    <div class="p-6 md:p-8 space-y-6 text-slate-700">
+                        <p>Website ini dirancang terstruktur. Ikuti panduan berikut agar pembelajaran maksimal:</p>
+                        <ul class="space-y-4">
+                            <li class="flex gap-4">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 text-primary flex items-center justify-center flex-shrink-0 font-bold">1</div>
+                                <div><b>Pahami Tujuan:</b> Mulailah dari menu Capaian & Tujuan untuk mengetahui target belajar.</div>
+                            </li>
+                            <li class="flex gap-4">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 text-primary flex items-center justify-center flex-shrink-0 font-bold">2</div>
+                                <div><b>Pelajari Materi:</b> Baca materi secara berurutan. Anda bisa menggunakan Kalkulator Interaktif untuk membantu pemahaman rumus.</div>
+                            </li>
+                            <li class="flex gap-4">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 text-primary flex items-center justify-center flex-shrink-0 font-bold">3</div>
+                                <div><b>Uji Pemahaman:</b> Kerjakan Latihan (tanpa nilai akhir) untuk mencoba, lalu ikuti Kuis (berbatas waktu). Akhiri dengan Evaluasi.</div>
+                            </li>
+                            <li class="flex gap-4">
+                                <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0 font-bold"><i class="fas fa-save"></i></div>
+                                <div><b>Penyimpanan:</b> Progres Anda otomatis tersimpan di perangkat ini. Jangan menghapus riwayat browser (cache/localstorage) agar nilai tidak hilang.</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGoals(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto grid md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border-t-4 border-primary">
+                        <h3 class="text-xl font-bold text-primary mb-4"><i class="fas fa-flag-checkered mr-2"></i>Capaian Pembelajaran (Fase F)</h3>
+                        <p class="text-slate-700 leading-relaxed text-sm">
+                            Pada akhir fase F, peserta didik mampu memahami dan menganalisis konsep-konsep ekonomi makro dasar seperti pendapatan nasional, pertumbuhan ekonomi, inflasi, kebijakan moneter dan fiskal, serta mempraktikkannya dalam penyelesaian masalah kontekstual perekonomian Indonesia.
+                        </p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border-t-4 border-secondary">
+                        <h3 class="text-xl font-bold text-secondary mb-4"><i class="fas fa-list-check mr-2"></i>Tujuan Pembelajaran</h3>
+                        <ul class="space-y-2 text-sm text-slate-700 list-disc pl-5">
+                            <li>Menjelaskan pengertian & konsep pendapatan nasional.</li>
+                            <li>Membedakan PDB, PNB, PNN, NNI, PI, dan DI.</li>
+                            <li>Menghitung pendapatan nasional dengan 3 pendekatan (Produksi, Pendapatan, Pengeluaran).</li>
+                            <li>Menganalisis pendapatan per kapita dan distribusi pendapatan (Ketimpangan).</li>
+                            <li>Menyelesaikan permasalahan kontekstual.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="max-w-4xl mx-auto mt-8 text-right">
+                    <button onclick="navigateTo('materi')" class="bg-primary text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-800 transition">
+                        Lanjut ke Materi <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        let activeChapterIndex = 0;
+        function renderMateri(container) {
+            const chap = materiData[activeChapterIndex];
+            markChapterRead(chap.id);
+
+            let dotsHtml = materiData.map((m, i) => `
+                <button onclick="activeChapterIndex=${i}; renderApp()" class="w-3 h-3 rounded-full ${i === activeChapterIndex ? 'bg-primary scale-125' : 'bg-slate-300 hover:bg-slate-400'} transition"></button>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto flex flex-col md:flex-row gap-6">
+                    <!-- Chapter Nav Mobile -->
+                    <div class="md:hidden flex justify-center gap-2 mb-4">
+                        ${dotsHtml}
+                    </div>
+
+                    <!-- Sidebar Chapter Desktop -->
+                    <div class="hidden md:block w-64 flex-shrink-0 space-y-2">
+                        <h3 class="font-bold text-slate-500 uppercase text-xs mb-3">Daftar Bab</h3>
+                        ${materiData.map((m, i) => `
+                            <button onclick="activeChapterIndex=${i}; renderApp()" class="w-full text-left px-4 py-3 rounded-lg text-sm transition border ${i === activeChapterIndex ? 'bg-white border-primary shadow-sm text-primary font-bold' : 'bg-transparent border-transparent hover:bg-slate-200 text-slate-600'}">
+                                ${state.progress.chaptersRead.includes(m.id) ? '<i class="fas fa-check-circle text-green-500 mr-2"></i>' : '<i class="far fa-circle text-slate-400 mr-2"></i>'}
+                                ${m.title.split(':')[0]}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <!-- Content Area -->
+                    <div class="flex-1">
+                        <div class="bg-white rounded-2xl shadow-sm p-6 md:p-8 min-h-[400px]">
+                            <h2 class="text-2xl font-bold text-primary border-b border-slate-100 pb-4 mb-6">${chap.title}</h2>
+                            <div class="prose max-w-none text-slate-700">
+                                ${chap.content}
+                            </div>
+                        </div>
+
+                        <!-- Footer Nav -->
+                        <div class="flex justify-between items-center mt-6">
+                            <button onclick="if(activeChapterIndex>0){activeChapterIndex--; renderApp()}" class="${activeChapterIndex === 0 ? 'invisible' : ''} px-4 py-2 bg-white text-slate-600 rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50">
+                                <i class="fas fa-arrow-left mr-2"></i> Sebelumnya
+                            </button>
+                            <div class="hidden md:flex gap-2">
+                                ${dotsHtml}
+                            </div>
+                            <button onclick="if(activeChapterIndex<materiData.length-1){activeChapterIndex++; renderApp()}else{navigateTo('calculator')}" class="px-6 py-2 bg-primary text-white rounded-lg shadow-sm hover:bg-blue-800 transition">
+                                ${activeChapterIndex === materiData.length - 1 ? 'Praktik Kalkulator <i class="fas fa-calculator ml-2"></i>' : 'Selanjutnya <i class="fas fa-arrow-right ml-2"></i>'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCalculator(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-primary">Kalkulator Pendapatan Nasional</h2>
+                        <p class="text-slate-600 mt-2">Pilih metode perhitungan untuk mensimulasikan rumus ekonomi.</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row">
+                        <div class="md:w-1/3 bg-blue-50 p-6 border-r border-blue-100">
+                            <h3 class="font-bold text-primary mb-4">Pilih Metode</h3>
+                            <select id="calc-method" onchange="updateCalcUI()" class="w-full p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary bg-white text-sm">
+                                <option value="pengeluaran">Pendekatan Pengeluaran</option>
+                                <option value="pendapatan">Pendekatan Pendapatan</option>
+                                <option value="pnb_pnn">PDB ke DI (Berjenjang)</option>
+                            </select>
+                            
+                            <div id="calc-rumus" class="mt-6 p-4 bg-white rounded-lg border border-blue-100 text-sm font-mono text-center text-primary font-bold">
+                                Y = C + I + G + (X - M)
+                            </div>
+                        </div>
+
+                        <div class="md:w-2/3 p-6 md:p-8" id="calc-inputs-container">
+                            <!-- Injected by updateCalcUI -->
+                        </div>
+                    </div>
+                </div>
+            `;
+            setTimeout(updateCalcUI, 50); // initial render
+        }
+
+        function updateCalcUI() {
+            const method = document.getElementById('calc-method').value;
+            const rumus = document.getElementById('calc-rumus');
+            const container = document.getElementById('calc-inputs-container');
+            
+            let html = '';
+            if(method === 'pengeluaran') {
+                rumus.innerText = 'Y = C + I + G + (X - M)';
+                html = `
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Konsumsi (C)</label><input type="number" id="inp-C" class="w-full p-2 border rounded" value="0"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Investasi (I)</label><input type="number" id="inp-I" class="w-full p-2 border rounded" value="0"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Pengeluaran Pem. (G)</label><input type="number" id="inp-G" class="w-full p-2 border rounded" value="0"></div>
+                        <div></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Ekspor (X)</label><input type="number" id="inp-X" class="w-full p-2 border rounded" value="0"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Impor (M)</label><input type="number" id="inp-M" class="w-full p-2 border rounded" value="0"></div>
+                    </div>
+                    <button onclick="calculate('pengeluaran')" class="w-full mt-6 bg-secondary text-white py-3 rounded-xl font-bold hover:bg-green-600 transition shadow">Hitung Y</button>
+                    <div id="calc-result" class="mt-6 text-center text-2xl font-bold text-primary hidden"></div>
+                `;
+            } else if (method === 'pendapatan') {
+                rumus.innerText = 'Y = r + w + i + p';
+                html = `
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Sewa (r)</label><input type="number" id="inp-r" class="w-full p-2 border rounded" value="0"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Upah (w)</label><input type="number" id="inp-w" class="w-full p-2 border rounded" value="0"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Bunga Modal (i)</label><input type="number" id="inp-i" class="w-full p-2 border rounded" value="0"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Laba (p)</label><input type="number" id="inp-p" class="w-full p-2 border rounded" value="0"></div>
+                    </div>
+                    <button onclick="calculate('pendapatan')" class="w-full mt-6 bg-secondary text-white py-3 rounded-xl font-bold hover:bg-green-600 transition shadow">Hitung Y</button>
+                    <div id="calc-result" class="mt-6 text-center text-2xl font-bold text-primary hidden"></div>
+                `;
+            } else {
+                rumus.innerText = 'PDB -> PNB -> PNN -> NNI -> PI -> DI';
+                html = `
+                    <div class="text-sm text-slate-600 mb-4 bg-amber-50 p-3 rounded">Simulasi penurunan dari PDB hingga menjadi Pendapatan Disposabel.</div>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div><label class="block font-bold text-slate-500 mb-1">PDB</label><input type="number" id="v-pdb" class="w-full p-2 border rounded text-xs" value="1000"></div>
+                        <div><label class="block font-bold text-slate-500 mb-1">Pendapatan Neto LN</label><input type="number" id="v-neto" class="w-full p-2 border rounded text-xs" value="50" title="Negatif jika WNA > WNI"></div>
+                        <div><label class="block font-bold text-slate-500 mb-1">Penyusutan</label><input type="number" id="v-susut" class="w-full p-2 border rounded text-xs" value="20"></div>
+                        <div><label class="block font-bold text-slate-500 mb-1">Pajak Tdk Langsung</label><input type="number" id="v-ptl" class="w-full p-2 border rounded text-xs" value="30"></div>
+                        <div><label class="block font-bold text-slate-500 mb-1">Transfer Payment</label><input type="number" id="v-tp" class="w-full p-2 border rounded text-xs" value="10"></div>
+                        <div><label class="block font-bold text-slate-500 mb-1">Iuran/Laba Ditahan</label><input type="number" id="v-tahan" class="w-full p-2 border rounded text-xs" value="15"></div>
+                        <div><label class="block font-bold text-slate-500 mb-1">Pajak Langsung</label><input type="number" id="v-pl" class="w-full p-2 border rounded text-xs" value="25"></div>
+                    </div>
+                    <button onclick="calculate('berjenjang')" class="w-full mt-4 bg-secondary text-white py-2 rounded-lg font-bold hover:bg-green-600 transition shadow">Analisis Total</button>
+                    <div id="calc-result" class="mt-4 p-4 bg-slate-50 border rounded text-sm hidden font-mono"></div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function calculate(type) {
+            const resDiv = document.getElementById('calc-result');
+            resDiv.classList.remove('hidden');
+            if(type === 'pengeluaran') {
+                const c = parseFloat(document.getElementById('inp-C').value)||0;
+                const i = parseFloat(document.getElementById('inp-I').value)||0;
+                const g = parseFloat(document.getElementById('inp-G').value)||0;
+                const x = parseFloat(document.getElementById('inp-X').value)||0;
+                const m = parseFloat(document.getElementById('inp-M').value)||0;
+                const y = c + i + g + (x - m);
+                resDiv.innerHTML = `Total Y = <span class="text-green-600">${y}</span>`;
+            } else if (type === 'pendapatan') {
+                const r = parseFloat(document.getElementById('inp-r').value)||0;
+                const w = parseFloat(document.getElementById('inp-w').value)||0;
+                const i = parseFloat(document.getElementById('inp-i').value)||0;
+                const p = parseFloat(document.getElementById('inp-p').value)||0;
+                const y = r + w + i + p;
+                resDiv.innerHTML = `Total Y = <span class="text-green-600">${y}</span>`;
+            } else {
+                const pdb = parseFloat(document.getElementById('v-pdb').value)||0;
+                const neto = parseFloat(document.getElementById('v-neto').value)||0;
+                const susut = parseFloat(document.getElementById('v-susut').value)||0;
+                const ptl = parseFloat(document.getElementById('v-ptl').value)||0;
+                const tp = parseFloat(document.getElementById('v-tp').value)||0;
+                const tahan = parseFloat(document.getElementById('v-tahan').value)||0;
+                const pl = parseFloat(document.getElementById('v-pl').value)||0;
+
+                const pnb = pdb + neto;
+                const pnn = pnb - susut;
+                const nni = pnn - ptl; // simplified no subsidy input
+                const pi = nni + tp - tahan;
+                const di = pi - pl;
+
+                resDiv.innerHTML = `
+                    <div class="space-y-1">
+                        <div>PNB = PDB + Neto LN = <b class="text-primary">${pnb}</b></div>
+                        <div>PNN = PNB - Penyusutan = <b class="text-primary">${pnn}</b></div>
+                        <div>NNI = PNN - Pajak Tdk Langsung = <b class="text-primary">${nni}</b></div>
+                        <div>PI  = NNI + TP - Laba Ditahan = <b class="text-primary">${pi}</b></div>
+                        <div class="pt-2 border-t font-bold text-lg">DI (Siap Belanja) = <span class="text-green-600">${di}</span></div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderInfographic(container) {
+            container.innerHTML = `
+                <div class="max-w-5xl mx-auto">
+                    <h2 class="text-2xl font-bold text-primary mb-6 text-center">Infografis Konsep Ekonomi</h2>
+                    
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
+                        <h3 class="text-lg font-bold text-center mb-6">Alur Perhitungan PDB menuju DI</h3>
+                        <div class="flex flex-col items-center max-w-lg mx-auto relative space-y-4">
+                            <!-- Flowchart pure HTML/CSS -->
+                            <div class="w-full bg-blue-600 text-white p-3 rounded-lg text-center font-bold shadow-md relative z-10">PDB (Produk Domestik Bruto)</div>
+                            <div class="h-6 border-l-2 border-dashed border-slate-400"></div>
+                            <div class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 -mt-2 mb-2">+ Pendapatan Neto Luar Negeri</div>
+                            
+                            <div class="w-full bg-blue-500 text-white p-3 rounded-lg text-center font-bold shadow-md relative z-10">PNB (Produk Nasional Bruto)</div>
+                            <div class="h-6 border-l-2 border-dashed border-slate-400"></div>
+                            <div class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 -mt-2 mb-2">- Penyusutan Modal</div>
+                            
+                            <div class="w-full bg-blue-400 text-white p-3 rounded-lg text-center font-bold shadow-md relative z-10">PNN (Produk Nasional Neto)</div>
+                            <div class="h-6 border-l-2 border-dashed border-slate-400"></div>
+                            <div class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 -mt-2 mb-2">- Pajak Tidak Langsung + Subsidi</div>
+
+                            <div class="w-full bg-blue-300 text-slate-800 p-3 rounded-lg text-center font-bold shadow-md relative z-10">NNI (Net National Income)</div>
+                            <div class="h-6 border-l-2 border-dashed border-slate-400"></div>
+                            <div class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 text-center -mt-2 mb-2">- Laba Ditahan, Pajak Perseroan<br>+ Transfer Payment</div>
+
+                            <div class="w-full bg-green-400 text-slate-800 p-3 rounded-lg text-center font-bold shadow-md relative z-10">PI (Personal Income)</div>
+                            <div class="h-6 border-l-2 border-dashed border-slate-400"></div>
+                            <div class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 -mt-2 mb-2">- Pajak Langsung</div>
+
+                            <div class="w-full bg-secondary text-white p-4 rounded-xl text-center font-black shadow-lg relative z-10 text-xl border-4 border-green-200">DI (Disposable Income)</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVideo(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold text-primary mb-6">Video Pembelajaran</h2>
+                    <div class="bg-white rounded-2xl shadow-sm p-4 border border-slate-100">
+                        <div class="relative pb-[56.25%] h-0 rounded-xl overflow-hidden shadow-inner bg-slate-900">
+                            <!-- Embedded YouTube Video placeholder - using a common educational search embed for safety -->
+                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/5T2k9qU8pM8?si=Z6W5x2x_7Z8Y-Q4U" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                        <div class="mt-4">
+                            <h3 class="font-bold text-lg text-slate-800">Penjelasan Konsep Pendapatan Nasional</h3>
+                            <p class="text-sm text-slate-500 mt-1">Video ilustrasi untuk mempermudah pemahaman mengenai perbedaan PDB, PNB, dan perhitungan secara keseluruhan.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // EXERCISE (Latihan) - Immediate feedback
+        let activeExIndex = 0;
+        function renderExercise(container) {
+            const q = quizData[activeExIndex];
+            
+            let optionsHtml = q.options.map((opt, i) => `
+                <button onclick="checkExerciseAnswer(${i}, ${q.answer})" id="ex-btn-${i}" class="option-btn w-full text-left p-4 rounded-xl mb-3 text-slate-700 bg-white">
+                    <span class="inline-block w-6 font-bold">${String.fromCharCode(65+i)}.</span> ${opt}
+                </button>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-primary">Latihan Santai</h2>
+                        <span class="text-sm font-bold bg-blue-100 text-primary px-3 py-1 rounded-full">Soal ${activeExIndex + 1} / ${quizData.length}</span>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                        <p class="text-lg font-medium text-slate-800 mb-6">${q.q}</p>
+                        <div id="ex-options">
+                            ${optionsHtml}
+                        </div>
+                        
+                        <div id="ex-feedback" class="mt-4 hidden p-4 rounded-xl border"></div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button onclick="activeExIndex = Math.max(0, activeExIndex - 1); renderApp()" class="px-6 py-2 bg-white text-slate-600 rounded-lg shadow-sm ${activeExIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}">Kembali</button>
+                        <button onclick="activeExIndex = Math.min(quizData.length - 1, activeExIndex + 1); renderApp()" class="px-6 py-2 bg-primary text-white rounded-lg shadow-sm hover:bg-blue-800 ${activeExIndex === quizData.length - 1 ? 'hidden' : ''}">Lanjut</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.checkExerciseAnswer = (selected, correct) => {
+            // Disable all
+            for(let i=0; i<4; i++) {
+                const btn = document.getElementById(`ex-btn-${i}`);
+                if(btn) {
+                    btn.disabled = true;
+                    if(i === correct) btn.classList.add('correct');
+                    else if (i === selected) btn.classList.add('wrong');
+                }
+            }
+            const fb = document.getElementById('ex-feedback');
+            fb.classList.remove('hidden');
+            if(selected === correct) {
+                fb.className = "mt-4 p-4 rounded-xl border border-green-200 bg-green-50 text-green-800 text-sm";
+                fb.innerHTML = `<b><i class="fas fa-check-circle mr-1"></i> Benar!</b><br>${quizData[activeExIndex].explanation}`;
+            } else {
+                fb.className = "mt-4 p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 text-sm";
+                fb.innerHTML = `<b><i class="fas fa-times-circle mr-1"></i> Kurang Tepat.</b><br>${quizData[activeExIndex].explanation}`;
+            }
+        };
+
+        // QUIZ (Timed)
+        let quizTimer;
+        let quizTimeLeft = 600; // 10 minutes
+        let currentQuizQs = [];
+        let userQuizAnswers = [];
+        let quizActive = false;
+
+        function startQuiz() {
+            quizActive = true;
+            quizTimeLeft = 600;
+            currentQuizQs = [...quizData].sort(() => 0.5 - Math.random()).slice(0, 10);
+            userQuizAnswers = new Array(10).fill(null);
+            
+            clearInterval(quizTimer);
+            quizTimer = setInterval(() => {
+                quizTimeLeft--;
+                const m = Math.floor(quizTimeLeft / 60).toString().padStart(2, '0');
+                const s = (quizTimeLeft % 60).toString().padStart(2, '0');
+                const tEl = document.getElementById('quiz-timer');
+                if(tEl) tEl.innerText = `${m}:${s}`;
+                if(quizTimeLeft <= 0) {
+                    clearInterval(quizTimer);
+                    submitQuiz();
+                }
+            }, 1000);
+            renderApp();
+        }
+
+        function renderQuiz(container) {
+            if(!quizActive) {
+                container.innerHTML = `
+                    <div class="max-w-2xl mx-auto text-center bg-white p-8 rounded-2xl shadow-sm mt-10">
+                        <i class="fas fa-stopwatch text-5xl text-accent mb-4"></i>
+                        <h2 class="text-2xl font-bold text-primary mb-2">Kuis Interaktif Pendapatan Nasional</h2>
+                        <p class="text-slate-600 mb-6">Kuis ini terdiri dari 10 soal acak. Waktu pengerjaan 10 menit. Nilai akan langsung keluar dan direkam pada sistem.</p>
+                        <button onclick="startQuiz()" class="bg-secondary text-white px-8 py-3 rounded-full font-bold text-lg shadow-lg hover:bg-green-600 transition transform hover:scale-105">Mulai Kuis Sekarang</button>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="max-w-4xl mx-auto pb-10">
+                    <div class="sticky top-0 bg-white p-4 rounded-xl shadow-md z-10 flex justify-between items-center mb-6 border-b-4 border-accent">
+                        <h2 class="font-bold text-primary"><i class="fas fa-edit mr-2"></i>Kuis Aktif</h2>
+                        <div class="text-xl font-mono font-bold text-red-600 bg-red-50 px-4 py-1 rounded" id="quiz-timer">10:00</div>
+                    </div>
+            `;
+
+            currentQuizQs.forEach((q, idx) => {
+                html += `
+                    <div class="bg-white p-6 rounded-xl shadow-sm mb-4 border border-slate-100">
+                        <p class="font-medium text-slate-800 mb-4">${idx + 1}. ${q.q}</p>
+                        <div class="space-y-2">
+                `;
+                q.options.forEach((opt, optIdx) => {
+                    const isSel = userQuizAnswers[idx] === optIdx;
+                    html += `
+                        <label class="block cursor-pointer">
+                            <input type="radio" name="q-${idx}" value="${optIdx}" class="peer hidden" onchange="userQuizAnswers[${idx}]=${optIdx}" ${isSel?'checked':''}>
+                            <div class="p-3 rounded-lg border-2 ${isSel ? 'border-primary bg-blue-50' : 'border-slate-200 hover:bg-slate-50 peer-checked:border-primary peer-checked:bg-blue-50'} transition">
+                                <span class="font-bold text-slate-500 mr-2">${String.fromCharCode(65+optIdx)}.</span> ${opt}
+                            </div>
+                        </label>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+
+            html += `
+                <div class="text-center mt-8">
+                    <button onclick="submitQuiz()" class="bg-primary text-white px-10 py-3 rounded-full font-bold text-lg shadow-lg hover:bg-blue-800 transition">Selesai & Kumpulkan</button>
+                </div></div>
+            `;
+            container.innerHTML = html;
+        }
+
+        window.submitQuiz = () => {
+            clearInterval(quizTimer);
+            quizActive = false;
+            let correct = 0;
+            userQuizAnswers.forEach((ans, idx) => {
+                if(ans === currentQuizQs[idx].answer) correct++;
+            });
+            const score = (correct / 10) * 100;
+            state.progress.quizScore = score;
+            saveProgress();
+            saveStudentData('quiz', score);
+
+            showModal('Hasil Kuis', `
+                <div class="text-center">
+                    <i class="fas fa-award text-5xl text-accent mb-4"></i>
+                    <h3 class="text-2xl font-bold text-slate-800">Nilai Anda: <span class="text-primary">${score}</span></h3>
+                    <p class="text-slate-600 mt-2">Anda menjawab benar ${correct} dari 10 soal.</p>
+                </div>
+            `);
+            renderApp();
+        };
+
+        // EVALUASI AKHIR (HOTS, 20 Soal)
+        let evalActive = false;
+        let userEvalAnswers = [];
+
+        function startEval() {
+            evalActive = true;
+            userEvalAnswers = new Array(evalData.length).fill(null);
+            renderApp();
+        }
+
+        function renderEval(container) {
+            if (state.progress.evalScore !== null && !evalActive) {
+                // Already done, show certificate / result
+                const s = state.progress.evalScore;
+                let cat = s >= 85 ? 'Sangat Baik' : (s >= 70 ? 'Baik' : (s >= 50 ? 'Cukup' : 'Kurang'));
+                let badge = s >= 85 ? 'fa-medal text-yellow-400' : 'fa-check-circle text-secondary';
+                
+                container.innerHTML = `
+                    <div class="max-w-3xl mx-auto text-center bg-white p-10 rounded-2xl shadow border border-slate-100 mt-4 relative" id="print-area">
+                        <!-- Certificate Design -->
+                        <div class="absolute inset-0 border-8 border-double border-blue-100 rounded-2xl pointer-events-none opacity-50"></div>
+                        <h2 class="text-3xl font-bold text-primary mb-2 tracking-widest uppercase">Evaluasi Selesai</h2>
+                        <p class="text-slate-500 mb-6">Materi: Pendapatan Nasional</p>
+                        
+                        <div class="inline-block p-6 rounded-full bg-slate-50 border-4 border-slate-100 mb-6">
+                            <i class="fas ${badge} text-6xl"></i>
+                        </div>
+                        
+                        <h3 class="text-5xl font-black text-slate-800 mb-2">${s}</h3>
+                        <p class="text-xl font-bold text-secondary mb-8">Kategori: ${cat}</p>
+                        
+                        <div class="grid grid-cols-2 gap-4 text-sm text-left max-w-md mx-auto mb-8 bg-blue-50 p-4 rounded-xl">
+                            <div><span class="text-slate-500">Nama Siswa:</span><br><b class="text-primary">Siswa (Tamu)</b></div>
+                            <div><span class="text-slate-500">Guru Pengampu:</span><br><b class="text-primary">Dewi I. Rolobessy, S.E.</b></div>
+                            <div class="col-span-2"><span class="text-slate-500">Asal Sekolah:</span><br><b class="text-primary">SMA Negeri 46 Maluku Tengah</b></div>
+                        </div>
+
+                        <div class="flex justify-center gap-4 no-print">
+                            <button onclick="window.print()" class="bg-slate-800 text-white px-6 py-2 rounded shadow hover:bg-slate-900"><i class="fas fa-print mr-2"></i>Cetak Hasil</button>
+                            <button onclick="startEval()" class="bg-primary text-white px-6 py-2 rounded shadow hover:bg-blue-800"><i class="fas fa-redo mr-2"></i>Ulangi Evaluasi</button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if(!evalActive) {
+                container.innerHTML = `
+                    <div class="max-w-2xl mx-auto text-center bg-white p-8 rounded-2xl shadow-sm mt-10 border-t-4 border-primary">
+                        <i class="fas fa-file-signature text-5xl text-primary mb-4"></i>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">Evaluasi Akhir Pembelajaran</h2>
+                        <p class="text-slate-600 mb-6">Uji pemahaman mendalam Anda. Terdiri dari 20 soal pilihan ganda berbasis HOTS (Higher Order Thinking Skills). Kerjakan dengan cermat.</p>
+                        <button onclick="startEval()" class="bg-primary text-white px-8 py-3 rounded-full font-bold text-lg shadow-lg hover:bg-blue-800 transition">Mulai Evaluasi</button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render Evaluation Test
+            let html = `
+                <div class="max-w-4xl mx-auto pb-10">
+                    <div class="mb-6 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-primary">Lembar Evaluasi Akhir</h2>
+                        <span class="px-3 py-1 bg-blue-100 text-primary rounded-full text-sm font-bold">20 Soal</span>
+                    </div>
+            `;
+
+            evalData.forEach((q, idx) => {
+                html += `
+                    <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm mb-4 border border-slate-100">
+                        <p class="font-medium text-slate-800 mb-4">${idx + 1}. ${q.q}</p>
+                        <div class="grid md:grid-cols-2 gap-3">
+                `;
+                q.options.forEach((opt, optIdx) => {
+                    const isSel = userEvalAnswers[idx] === optIdx;
+                    html += `
+                        <label class="block cursor-pointer">
+                            <input type="radio" name="e-${idx}" value="${optIdx}" class="peer hidden" onchange="userEvalAnswers[${idx}]=${optIdx}" ${isSel?'checked':''}>
+                            <div class="p-3 rounded-lg border-2 ${isSel ? 'border-primary bg-blue-50' : 'border-slate-100 hover:bg-slate-50 peer-checked:border-primary peer-checked:bg-blue-50'} transition h-full flex items-center">
+                                <span class="font-bold text-slate-400 mr-3">${String.fromCharCode(65+optIdx)}.</span> <span class="text-sm">${opt}</span>
+                            </div>
+                        </label>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+
+            html += `
+                <div class="text-center mt-8">
+                    <button onclick="submitEval()" class="bg-secondary text-white px-10 py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-600 transition w-full md:w-auto">Kumpulkan Evaluasi <i class="fas fa-paper-plane ml-2"></i></button>
+                </div></div>
+            `;
+            container.innerHTML = html;
+        }
+
+        window.submitEval = () => {
+            // Check if all answered
+            if(userEvalAnswers.includes(null)) {
+                showModal('Peringatan', '<p class="text-red-600">Mohon jawab seluruh soal sebelum mengumpulkan.</p>');
+                return;
+            }
+            evalActive = false;
+            let correct = 0;
+            userEvalAnswers.forEach((ans, idx) => {
+                if(ans === evalData[idx].answer) correct++;
+            });
+            const score = Math.round((correct / evalData.length) * 100);
+            state.progress.evalScore = score;
+            saveProgress();
+            saveStudentData('eval', score);
+            renderApp();
+        };
+
+        // GURU DASHBOARD
+        function renderDashboard(container) {
+            let trs = state.studentsData.length === 0 ? `<tr><td colspan="4" class="p-4 text-center text-slate-500">Belum ada data siswa.</td></tr>` : 
+                state.studentsData.map((s, i) => `
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3">${i+1}</td>
+                    <td class="p-3 font-medium">${s.name}</td>
+                    <td class="p-3"><span class="px-2 py-1 rounded bg-blue-100 text-primary text-xs font-bold">${s.quiz}</span></td>
+                    <td class="p-3"><span class="px-2 py-1 rounded ${s.eval >= 70 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} text-xs font-bold">${s.eval}</span></td>
+                    <td class="p-3 text-xs text-slate-500">${s.date}</td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="max-w-5xl mx-auto">
+                    <h2 class="text-2xl font-bold text-primary mb-6"><i class="fas fa-chalkboard-teacher mr-2"></i>Dasbor Guru</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-slate-500">Total Siswa Aktif</p>
+                                <h3 class="text-3xl font-bold text-slate-800">${state.studentsData.length}</h3>
+                            </div>
+                            <i class="fas fa-users text-4xl text-blue-100"></i>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-slate-500">Rata-rata Evaluasi</p>
+                                <h3 class="text-3xl font-bold text-slate-800">${state.studentsData.length ? Math.round(state.studentsData.reduce((a,b)=>a+b.eval,0)/state.studentsData.length) : 0}</h3>
+                            </div>
+                            <i class="fas fa-chart-bar text-4xl text-green-100"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100">
+                        <div class="bg-slate-50 p-4 border-b">
+                            <h3 class="font-bold text-slate-700">Rekapitulasi Nilai Siswa (Lokal)</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-slate-600">
+                                <thead class="bg-slate-100 text-slate-700">
+                                    <tr>
+                                        <th class="p-3 w-12">No</th>
+                                        <th class="p-3">Nama Lengkap</th>
+                                        <th class="p-3 w-24">Kuis</th>
+                                        <th class="p-3 w-24">Evaluasi</th>
+                                        <th class="p-3 w-32">Tanggal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${trs}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize App
+        window.onload = () => {
+            renderApp();
+        };
+    </script>
+</body>
+</html>
